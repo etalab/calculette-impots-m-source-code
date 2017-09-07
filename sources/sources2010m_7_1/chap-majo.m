@@ -1,0 +1,913 @@
+#*************************************************************************************************************************
+#
+#Copyright or © or Copr.[DGFIP][2017]
+#
+#Ce logiciel a été initialement développé par la Direction Générale des 
+#Finances Publiques pour permettre le calcul de l'impôt sur le revenu 2011 
+#au titre des revenus perçus en 2010. La présente version a permis la 
+#génération du moteur de calcul des chaînes de taxation des rôles d'impôt 
+#sur le revenu de ce millésime.
+#
+#Ce logiciel est régi par la licence CeCILL 2.1 soumise au droit français 
+#et respectant les principes de diffusion des logiciels libres. Vous pouvez 
+#utiliser, modifier et/ou redistribuer ce programme sous les conditions de 
+#la licence CeCILL 2.1 telle que diffusée par le CEA, le CNRS et l'INRIA  sur 
+#le site "http://www.cecill.info".
+#
+#Le fait que vous puissiez accéder à cet en-tête signifie que vous avez pris 
+#connaissance de la licence CeCILL 2.1 et que vous en avez accepté les termes.
+#
+#**************************************************************************************************************************
+regle 23111:
+application :  oceans, iliad ;
+IRBASE = IRN - IRANT;
+CSBASE_MAJO = (CSG - CSGIM) * positif(CSG + RDSN + PRS + CSAL - SEUIL_REC_CP2);
+RDBASE_MAJO = (RDSN - CRDSIM) * positif(CSG + RDSN + PRS + CSAL - SEUIL_REC_CP2);
+PSBASE_MAJO = (PRS - PRSPROV) * positif(CSG + RDSN + PRS + CSAL - SEUIL_REC_CP2);
+CSALBASE_MAJO = (CSAL - CSALPROV) * positif(CSG + RDSN + PRS + CSAL - SEUIL_REC_CP2);
+CDISBASE_MAJO = CDIS * positif(CDIS + CSG + RDSN + PRS + CSAL - SEUIL_REC_CP2);
+TAXABASE_MAJO = TAXASSUR * positif(IAMD1 + 1 - SEUIL_PERCEP);
+regle corrective 23112:
+application :  oceans, iliad ;
+SUPIR[X] =  null(X) * positif(FLAG_RETARD) * positif(FLAG_RECTIF)
+		   * max(IRBASE,0)
+	      +( 1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+		 * positif(null(X-3)+null(X-7)+null(X-8)+null(X-11)+null(X-12))
+		  * max(0,IRBASE - TIRBASE[FLAG_DERSTTR])
+	     +( 1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+	     * (1 - positif((null(X-3)+null(X-7)+null(X-8)+null(X-11)+null(X-12))))
+	     * positif(IRNIN) * positif(IRBASE) 
+	     * ( (1 - positif(TARDIFEVT2)*null(X-2))
+		* max(0,IRBASE - max(0,TIRBASE[FLAG_DERSTTR]))
+               + positif(TARDIFEVT2)*null(X-2) * TIRBASE[FLAG_DERSTTR])
+	       * (1 - positif(null(X-1)))
+
+           + null(X-1)*positif( null(CSTRATE1 - 1)
+			       +null(CSTRATE1 - 7)
+		               +null(CSTRATE1 - 8)
+			       +null(CSTRATE1 - 10)
+		               +null(CSTRATE1 - 11)
+	                       +null(CSTRATE1 - 17)
+                               +null(CSTRATE1 - 18)) * max(0,IRBASE -  max(0, TIRBASE[FLAG_DERSTTR]))
+
+           + null(X-1)*positif( null(CSTRATE1 - 3)
+	                       +null(CSTRATE1 - 4)
+			       +null(CSTRATE1 - 5)
+			       +null(CSTRATE1 - 6)
+		               +null(CSTRATE1 - 55)) * (1-positif((1-positif(IRBASE))
+								  *(1-positif(TIRBASE[FLAG_DERSTTR]))))
+						     * max(0, max(0, IRBASE) - TIRBASE[FLAG_DERSTTR])
+			       
+
+           + null(X-1)*positif( null(CSTRATE1 - 3)
+	                       +null(CSTRATE1 - 4)
+			       +null(CSTRATE1 - 5)
+			       +null(CSTRATE1 - 6)
+		               +null(CSTRATE1 - 55))*(1-positif(IRBASE))
+						    *(1-positif(TIRBASE[FLAG_DERSTTR]))
+						    *(IRBASE - TIRBASE[FLAG_DERSTTR])
+			       ;
+SUP2IR[X] = null(X) * null(CODE_2042 - 17) * positif(FLAG_RETARD) 
+	       * positif(FLAG_RECTIF) * max(IRBASE,0)
+	      + ((positif(null(X-14)+null(X-15)+null(X-18)+null(X-20))
+		  * max(0,IRBASE - TIRBASE[FLAG_DERSTTR])
+	     )
+	     + (1 - positif(null(X-14)+null(X-15)+null(X-18)+null(X-20)))* 0)
+                 * (1 - positif(null(X-1)))
+
+           + null(X-1)*positif( null(CSTRATE1 - 1)
+                               +null(CSTRATE1 - 17)
+	                       +null(CSTRATE1 - 2)
+			       +null(CSTRATE1 - 10)
+		               +null(CSTRATE1 - 30)) * max(0, IRBASE - TIRBASE[FLAG_DERSTTR]);
+SUPCS[X] =  (1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+	 * max(0,CSBASE_MAJO - (TCSBASE[FLAG_DERSTTR] * positif(TNAPCR[FLAG_DERSTTR] + NAPCR_P + null(CSBASE_MAJO - TCSBASE[FLAG_DERSTTR]))))
+         +  (positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+         * max(CSBASE_MAJO,0); 
+SUPPS[X] =  (1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+	 * max(0,PSBASE_MAJO - (TPSBASE[FLAG_DERSTTR] * positif(TNAPCR[FLAG_DERSTTR] + NAPCR_P + null(PSBASE_MAJO - TPSBASE[FLAG_DERSTTR]))))
+         +  (positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+         * max(PSBASE_MAJO,0); 
+SUPRD[X] =  (1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+	 * max(0,RDBASE_MAJO - (TRDBASE[FLAG_DERSTTR] * positif(TNAPCR[FLAG_DERSTTR] + NAPCR_P + null(RDBASE_MAJO - TRDBASE[FLAG_DERSTTR]))))
+         +  (positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+         * max(RDBASE_MAJO,0); 
+SUPCSAL[X] =  (1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+	 * max(0,CSALBASE_MAJO - (TCSALBASE[FLAG_DERSTTR] * positif(TNAPCR[FLAG_DERSTTR] + NAPCR_P + null(CSALBASE_MAJO - TCSALBASE[FLAG_DERSTTR]))))
+         +  (positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+         * max(CSALBASE_MAJO,0); 
+SUPCDIS[X] =  (1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+	 * max(0,CDISBASE_MAJO - (TCDISBASE[FLAG_DERSTTR] * positif(TNAPCR[FLAG_DERSTTR] + NAPCR_P + null(CDISBASE_MAJO - TCDISBASE[FLAG_DERSTTR]))))
+         +  (positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+         * max(CDISBASE_MAJO,0); 
+SUPTAXA[X] =  null(X) * positif(FLAG_RETARD) * positif(FLAG_RECTIF)
+		   * max(TAXABASE_MAJO,0)
+	      +( 1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+		 * positif(null(X-3)+null(X-7)+null(X-8)+null(X-11)+null(X-12))
+	         * max(0,TAXABASE_MAJO - TTAXABASE[FLAG_DERSTTR])
+     +( 1 - positif(FLAG_RETARD) * positif(FLAG_RECTIF) * null(X))
+		* (1 - positif((null(X-3)+null(X-7)+null(X-8)+null(X-11)+null(X-12))))
+		* positif(IRNIN+TAXABASE_MAJO) *
+	       (
+	        positif(IRBASE) * max(0,TAXABASE_MAJO - TTAXABASE[FLAG_DERSTTR])
+	       +(1 - positif(IRBASE)) * positif(TAXABASE_MAJO - TTAXABASE[FLAG_DERSTTR]) *
+		      (
+		       positif(TIRBASE[FLAG_DERSTTR]+TTAXABASE[FLAG_DERSTTR])
+		       * max(0,TAXABASE_MAJO - TTAXABASE[FLAG_DERSTTR])
+		       +
+		       (1 - positif(TIRBASE[FLAG_DERSTTR] + TTAXABASE[FLAG_DERSTTR]))
+		       * max(0,TAXABASE_MAJO + IRBASE - TTAXABASE[FLAG_DERSTTR])
+		      )
+		)
+	     ;
+SUP2TAXA[X] = null(X) * null(CODE_2042 - 17) * positif(FLAG_RETARD) 
+	       * positif(FLAG_RECTIF) * max(TAXABASE_MAJO,0)
+	      + (positif(null(X-14)+null(X-15)+null(X-18)+null(X-20))
+		  * max(0,TAXABASE_MAJO - TTAXABASE[FLAG_DERSTTR])
+	     )
+	     + (1 - positif(null(X-14)+null(X-15)+null(X-18)+null(X-20))) * 0
+	     ;
+regle corrective 23113:
+application : oceans, iliad;
+TMAJOIR[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPIR[X] * TAUX_STRATE/100 ));
+T2MAJOIR[X] = (1 - null(1 - IND_RJLJ))
+	     * (
+	     (positif(null(X - 0) * null(CODE_2042 - 17) 
+		 +null(X-14)+null(X-15)+null(X-18)+null(X-20))
+		*(null(X-20)*TL_IR*arr(SUP2IR[X] * TX1758A/100)
+		  +(1-null(X-20)) * arr(SUP2IR[X] * TX1758A/100)))
+
+	      + null(X-1) 
+	                  * positif(null(X - 1) * null(CSTRATE1 - 17)
+                               +null(CSTRATE1 - 1)
+	                       +null(CSTRATE1 - 2)
+			       +null(CSTRATE1 - 10)
+		               +null(CSTRATE1 - 30)) * arr(SUP2IR[X] * TX1758A/100)
+
+                 ); 
+
+MAJOIR_ST = MAJOIRST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJOIR[X] + T2MAJOIR[X];
+TMAJOCS[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPCS[X] * TAUX_STRATE/100 ));
+MAJOCS_ST = MAJOCSST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJOCS[X] ;
+TMAJOPS[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPPS[X] * TAUX_STRATE/100 ));
+MAJOPS_ST = MAJOPSST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJOPS[X] ;
+TMAJORD[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPRD[X] * TAUX_STRATE/100 ));
+MAJORD_ST = MAJORDST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJORD[X] ;
+TMAJOCSAL[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPCSAL[X] * TAUX_STRATE/100 ));
+MAJOCSAL_ST = MAJOCSALST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJOCSAL[X] ;
+TMAJOCDIS[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPCDIS[X] * TAUX_STRATE/100 ));
+MAJOCDIS_ST = MAJOCDISST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJOCDIS[X] ;
+TMAJOTAXA[X] = (1 - null((1 - IND_RJLJ) + (10 - TAUX_STRATE)))
+	     * arr( (SUPTAXA[X] * TAUX_STRATE/100 ));
+T2MAJOTAXA[X] = (1 - null(1 - IND_RJLJ))
+	     * (positif(null(X - 0) * null(CODE_2042 - 17) 
+	        + null(X-14)+null(X-15)+null(X-18)+null(X-20))
+		*(null(X-20)*TL_TAXAGA*arr(SUP2TAXA[X] * TX1758A/100)
+		  +(1-null(X-20)) * arr(SUP2TAXA[X] * TX1758A/100)));
+MAJOTAXA_ST = MAJOTAXAST_DEF * (1 - positif(FLAG_1STRATE)) + 
+            TMAJOTAXA[X] + T2MAJOTAXA[X];
+regle corrective 23114:
+application : oceans, iliad;
+MAJOIR07_TARDIF = max(0,arr(FLAG_TRTARDIF * IRBASE * TAUX_2042/100)
+			* STR_TR16 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	); 
+MAJOIR08_TARDIF = max(0,arr(FLAG_TRTARDIF * IRBASE * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	); 
+MAJOIR17_1TARDIF = max(0,arr(FLAG_TRTARDIF * IRBASE * TAUX_2042/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	); 
+MAJOIR17_2TARDIF = max(0,arr(FLAG_TRTARDIF * IRBASE * TX1758A/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	); 
+MAJOIR_TARDIF = somme(x = 07,08: MAJOIR0x_TARDIF) 
+		+ MAJOIR17_1TARDIF + MAJOIR17_2TARDIF;
+MAJOCS07_TARDIF = max(0,arr(FLAG_TRTARDIF * CSBASE_MAJO * TAUX_2042/100)
+			* STR_TR16 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCS08_TARDIF = max(0,arr(FLAG_TRTARDIF * CSBASE_MAJO * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCS17_TARDIF = max(0,arr(FLAG_TRTARDIF * CSBASE_MAJO * TAUX_2042/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCS_TARDIF = somme(x = 07,08,17 : MAJOCSx_TARDIF);
+MAJOPS07_TARDIF = max(0,arr(FLAG_TRTARDIF * PSBASE_MAJO * TAUX_2042/100)
+			* STR_TR16 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOPS08_TARDIF = max(0,arr(FLAG_TRTARDIF * PSBASE_MAJO * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOPS17_TARDIF = max(0,arr(FLAG_TRTARDIF * PSBASE_MAJO * TAUX_2042/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOPS_TARDIF = somme(x = 07,08,17 : MAJOPSx_TARDIF);
+MAJORD07_TARDIF = max(0,arr(FLAG_TRTARDIF * RDBASE_MAJO * TAUX_2042/100)
+			* STR_TR16
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJORD08_TARDIF = max(0,arr(FLAG_TRTARDIF * RDBASE_MAJO * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJORD17_TARDIF = max(0,arr(FLAG_TRTARDIF * RDBASE_MAJO * TAUX_2042/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJORD_TARDIF = somme(x = 07,08,17 : MAJORDx_TARDIF);
+MAJOCSAL07_TARDIF = max(0,arr(FLAG_TRTARDIF * CSALBASE_MAJO * TAUX_2042/100)
+			* STR_TR16
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCSAL08_TARDIF = max(0,arr(FLAG_TRTARDIF * CSALBASE_MAJO * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCSAL17_TARDIF = max(0,arr(FLAG_TRTARDIF * CSALBASE_MAJO * TAUX_2042/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCSAL_TARDIF = somme(x = 07,08,17 : MAJOCSALx_TARDIF);
+MAJOCDIS07_TARDIF = max(0,arr(FLAG_TRTARDIF * CDISBASE_MAJO * TAUX_2042/100)
+			* STR_TR16
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCDIS08_TARDIF = max(0,arr(FLAG_TRTARDIF * CDISBASE_MAJO * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCDIS17_TARDIF = max(0,arr(FLAG_TRTARDIF * CDISBASE_MAJO * TAUX_2042/100)
+			* STR_TR15 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOCDIS_TARDIF = somme(x = 07,08,17 : MAJOCDISx_TARDIF);
+MAJOTAXA07_TARDIF = max(0,arr(FLAG_TRTARDIF * TAXABASE_MAJO * TAUX_2042/100)
+			* STR_TR16
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOTAXA08_TARDIF = max(0,arr(FLAG_TRTARDIF * TAXABASE_MAJO * TAUX_2042/100)
+			* STR_TR10 
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOTA17_1TARDIF = max(0,arr(FLAG_TRTARDIF * TAXABASE_MAJO * TAUX_2042/100)
+			* STR_TR15
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOTA17_2TARDIF = max(0,arr(FLAG_TRTARDIF * TAXABASE_MAJO * TX1758A/100)
+			* STR_TR15
+			* (1 - null((1 -IND_RJLJ) + (10 - TAUX_2042)))
+	);
+MAJOTAXA_TARDIF = somme(x = 07,08 : MAJOTAXA0x_TARDIF) 
+		+ MAJOTA17_1TARDIF + MAJOTA17_2TARDIF;
+IRNIN_TARDIF = IRBASE * FLAG_TRTARDIF ;
+CSG_TARDIF = CSBASE_MAJO * FLAG_TRTARDIF ;
+RDS_TARDIF = RDBASE_MAJO* FLAG_TRTARDIF;
+PRS_TARDIF = PSBASE_MAJO * FLAG_TRTARDIF;
+CSAL_TARDIF = CSALBASE_MAJO * FLAG_TRTARDIF;
+CDIS_TARDIF = CDISBASE_MAJO * FLAG_TRTARDIF;
+TAXA_TARDIF = TAXABASE_MAJO * FLAG_TRTARDIF;
+regle corrective 231141:
+application : oceans, iliad;
+FLAG_TRTARDIF_R = FLAG_RETARD * FLAG_RECTIF * FLAG_1STRATE 
+		 * (null(CSTRATE99 - 7) + null(CSTRATE99 - 8) + null(CSTRATE99 - 17) );
+MAJOIR07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJOIR[00];
+MAJOIR08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJOIR[00];
+MAJOIR17_1TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOIR[00];
+MAJOIR17_2TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOIR[00];
+MAJOIRTARDIF_R = somme(x = 07,08: MAJOIR0xTARDIF_R) 
+		+ MAJOIR17_1TARDIF_R + MAJOIR17_2TARDIF_R;
+MAJOCS07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJOCS[00];
+MAJOCS08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJOCS[00];
+MAJOCS17TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOCS[00];
+MAJOCSTARDIF_R = somme(x = 07,08,17: MAJOCSxTARDIF_R);
+MAJOPS07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJOPS[00];
+MAJOPS08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJOPS[00];
+MAJOPS17TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOPS[00];
+MAJOPSTARDIF_R = somme(x = 07,08,17: MAJOPSxTARDIF_R);
+MAJORD07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJORD[00];
+MAJORD08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJORD[00];
+MAJORD17TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJORD[00];
+MAJORDTARDIF_R = somme(x = 07,08,17: MAJORDxTARDIF_R);
+MAJOCSAL07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJOCSAL[00];
+MAJOCSAL08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJOCSAL[00];
+MAJOCSAL17TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOCSAL[00];
+MAJOCSALTARDIF_R = somme(x = 07,08,17: MAJOCSALxTARDIF_R);
+MAJOCDIS07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJOCDIS[00];
+MAJOCDIS08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJOCDIS[00];
+MAJOCDIS17TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOCDIS[00];
+MAJOCDISTARDIF_R = somme(x = 07,08,17: MAJOCDISxTARDIF_R);
+MAJOTAXA07TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-7) * TMAJOTAXA[00];
+MAJOTAXA08TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-8) * TMAJOTAXA[00];
+MAJOTA17_1TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOTAXA[00];
+MAJOTA17_2TARDIF_R = FLAG_RETARD * FLAG_RECTIF * null(CSTRATE99-17) * TMAJOTAXA[00];
+MAJOTAXATARDIF_R = somme(x = 07,08: MAJOTAXA0xTARDIF_R) 
+		+ MAJOTA17_1TARDIF_R + MAJOTA17_2TARDIF_R;
+regle corrective 231142:
+application : oceans, iliad;
+FLAG_TRTARDIF_F = FLAG_RETARD * positif(FLAG_TRDEGTR);
+MAJOIR07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(IRNIN * TAUX_2042/100);
+MAJOIR08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(IRNIN * TAUX_2042/100);
+MAJOIR17_1TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(IRNIN * TAUX_2042/100);
+MAJOIR17_2TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(IRNIN * TX1758A/100);
+MAJOIRTARDIF_F = somme(x = 07,08: MAJOIR0xTARDIF_F) 
+		+ MAJOIR17_1TARDIF_F + MAJOIR17_2TARDIF_F;
+MAJOCS07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(CSBASE_MAJO * TAUX_2042/100);
+MAJOCS08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(CSBASE_MAJO * TAUX_2042/100);
+MAJOCS17TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(CSBASE_MAJO * TAUX_2042/100);
+MAJOCSTARDIF_F = somme(x = 07,08,17: MAJOCSxTARDIF_F);
+MAJOPS07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(PSBASE_MAJO * TAUX_2042/100);
+MAJOPS08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(PSBASE_MAJO * TAUX_2042/100);
+MAJOPS17TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(PSBASE_MAJO * TAUX_2042/100);
+MAJOPSTARDIF_F = somme(x = 07,08,17: MAJOPSxTARDIF_F);
+MAJORD07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(RDBASE_MAJO * TAUX_2042/100);
+MAJORD08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(RDBASE_MAJO * TAUX_2042/100);
+MAJORD17TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(RDBASE_MAJO * TAUX_2042/100);
+MAJORDTARDIF_F = somme(x = 07,08,17: MAJORDxTARDIF_F);
+MAJOCSAL07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(CSALBASE_MAJO * TAUX_2042/100);
+MAJOCSAL08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(CSALBASE_MAJO * TAUX_2042/100);
+MAJOCSAL17TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(CSALBASE_MAJO * TAUX_2042/100);
+MAJOCSALTARDIF_F = somme(x = 07,08,17: MAJOCSALxTARDIF_F);
+MAJOCDIS07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(CDISBASE_MAJO * TAUX_2042/100);
+MAJOCDIS08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(CDISBASE_MAJO * TAUX_2042/100);
+MAJOCDIS17TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(CDISBASE_MAJO * TAUX_2042/100);
+MAJOCDISTARDIF_F = somme(x = 07,08,17: MAJOCDISxTARDIF_F);
+MAJOTAXA07TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 7) * arr(TAXABASE_MAJO * TAUX_2042/100);
+MAJOTAXA08TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 8) * arr(TAXABASE_MAJO * TAUX_2042/100);
+MAJOTA17_1TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(TAXABASE_MAJO * TAUX_2042/100);
+MAJOTA17_2TARDIF_F = FLAG_RETARD * null(FLAG_TRDEGTR - 17) * arr(TAXABASE_MAJO * TX1758A/100);
+MAJOTAXATARDIF_F = somme(x = 07,08: MAJOTAXA0xTARDIF_F) 
+		+ MAJOTA17_1TARDIF_F + MAJOTA17_2TARDIF_F;
+regle corrective 231143:
+application : oceans, iliad;
+MAJOIR07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOIR07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOIR07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOIR07TARDIF_R,MAJOIR07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOIRTARDIF_REF, MAJOIR07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOIR07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOIR07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOIR07TARDIF_A)
+		   ) ;
+MAJOIR08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOIR08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOIR08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOIR08TARDIF_R,MAJOIR08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOIRTARDIF_REF, MAJOIR08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOIR08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOIR08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJOIR08TARDIF_A)
+		   ) ;
+MAJOIR17_1TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOIR17_1TARDIF
+		    + FLAG_TRTARDIF_R * MAJOIR17_1TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOIR17_1TARDIF_R,MAJOIR17_1TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOIRTARDIF_REF/2, MAJOIR17_1TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOIR17_1TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOIR17_1TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOIR17_1TARDIF_A)
+		   ) ;
+MAJOIR17_2TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOIR17_2TARDIF
+		    + FLAG_TRTARDIF_R * MAJOIR17_2TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOIR17_2TARDIF_R,MAJOIR17_2TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOIRTARDIF_REF/2, MAJOIR17_2TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOIR17_2TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOIR17_2TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOIR17_2TARDIF_A)
+		   ) ;
+MAJOIRTARDIF_D = somme(x = 07..08: MAJOIR0xTARDIF_D) 
+		+ MAJOIR17_1TARDIF_D + MAJOIR17_2TARDIF_D;
+MAJOCS07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCS07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCS07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCS07TARDIF_R,MAJOCS07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCS07TARDIF_A, MAJOCS07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCS07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCS07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOCS07TARDIF_A)
+		   ) ;
+MAJOCS08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCS08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCS08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCS08TARDIF_R,MAJOCS08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCS08TARDIF_A, MAJOCS08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCS08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCS08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJOCS08TARDIF_A)
+		   ) ;
+MAJOCS17TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCS17_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCS17TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCS17TARDIF_R,MAJOCS17TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCS17TARDIF_A, MAJOCS17TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCS17TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCS17TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOCS17TARDIF_A)
+		   ) ;
+MAJOCSTARDIF_D = somme(x = 07,08,17: MAJOCSxTARDIF_D);
+MAJOPS07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOPS07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOPS07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOPS07TARDIF_R,MAJOPS07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOPS07TARDIF_A, MAJOPS07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOPS07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOPS07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOPS07TARDIF_A)
+		   ) ;
+MAJOPS08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOPS08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOPS08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOPS08TARDIF_R,MAJOPS08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOPS08TARDIF_A, MAJOPS08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOPS08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOPS08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJOPS08TARDIF_A)
+		   ) ;
+MAJOPS17TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOPS17_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOPS17TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOPS17TARDIF_R,MAJOPS17TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOPS17TARDIF_A, MAJOPS17TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOPS17TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOPS17TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOPS17TARDIF_A)
+		   ) ;
+MAJOPSTARDIF_D = somme(x = 07,08,17: MAJOPSxTARDIF_D);
+MAJORD07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJORD07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJORD07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJORD07TARDIF_R,MAJORD07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJORD07TARDIF_A, MAJORD07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJORD07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJORD07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJORD07TARDIF_A)
+		   ) ;
+MAJORD08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJORD08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJORD08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJORD08TARDIF_R,MAJORD08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJORD08TARDIF_A, MAJORD08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJORD08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJORD08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJORD08TARDIF_A)
+		   ) ;
+MAJORD17TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJORD17_TARDIF
+		    + FLAG_TRTARDIF_R * MAJORD17TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJORD17TARDIF_R,MAJORD17TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJORD17TARDIF_A, MAJORD17TARDIF_F))
+		    + FLAG_TRMAJOP * MAJORD17TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJORD17TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJORD17TARDIF_A)
+		   ) ;
+MAJORDTARDIF_D = somme(x = 07,08,17: MAJORDxTARDIF_D);
+MAJOCSAL07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCSAL07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCSAL07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCSAL07TARDIF_R,MAJOCSAL07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCSAL07TARDIF_A, MAJOCSAL07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCSAL07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCSAL07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOCSAL07TARDIF_A)
+		   ) ;
+MAJOCSAL08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCSAL08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCSAL08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCSAL08TARDIF_R,MAJOCSAL08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCSAL08TARDIF_A, MAJOCSAL08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCSAL08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCSAL08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJOCSAL08TARDIF_A)
+		   ) ;
+MAJOCSAL17TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCSAL17_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCSAL17TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCSAL17TARDIF_R,MAJOCSAL17TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCSAL17TARDIF_A, MAJOCSAL17TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCSAL17TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCSAL17TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOCSAL17TARDIF_A)
+		   ) ;
+MAJOCSALTARDIF_D = somme(x = 07,08,17: MAJOCSALxTARDIF_D);
+MAJOCDIS07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCDIS07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCDIS07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCDIS07TARDIF_R,MAJOCDIS07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCDIS07TARDIF_A, MAJOCDIS07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCDIS07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCDIS07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOCDIS07TARDIF_A)
+		   ) ;
+MAJOCDIS08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCDIS08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCDIS08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCDIS08TARDIF_R,MAJOCDIS08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCDIS08TARDIF_A, MAJOCDIS08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCDIS08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCDIS08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJOCDIS08TARDIF_A)
+		   ) ;
+MAJOCDIS17TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOCDIS17_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOCDIS17TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOCDIS17TARDIF_R,MAJOCDIS17TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOCDIS17TARDIF_A, MAJOCDIS17TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOCDIS17TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOCDIS17TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOCDIS17TARDIF_A)
+		   ) ;
+MAJOCDISTARDIF_D = somme(x = 07,08,17: MAJOCDISxTARDIF_D);
+MAJOTAXA07TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOTAXA07_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOTAXA07TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOTAXA07TARDIF_R,MAJOTAXA07TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOTAXA07TARDIF_A, MAJOTAXA07TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOTAXA07TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOTAXA07TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOTAXA07TARDIF_A)
+		   ) ;
+MAJOTAXA08TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOTAXA08_TARDIF
+		    + FLAG_TRTARDIF_R * MAJOTAXA08TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOTAXA08TARDIF_R,MAJOTAXA08TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOTAXA08TARDIF_A, MAJOTAXA08TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOTAXA08TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOTAXA08TARDIF_R
+			 + (1 - positif(FLAG_RECTIF)) * MAJOTAXA08TARDIF_A)
+		   ) ;
+MAJOTA17_1TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOTA17_1TARDIF
+		    + FLAG_TRTARDIF_R * MAJOTA17_1TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOTA17_1TARDIF_R,MAJOTA17_1TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOTA17_1TARDIF_A, MAJOTA17_1TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOTA17_1TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOTA17_1TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOTA17_1TARDIF_A)
+		   ) ;
+MAJOTA17_2TARDIF_D = FLAG_RETARD *
+		    (FLAG_TRTARDIF * MAJOTA17_2TARDIF
+		    + FLAG_TRTARDIF_R * MAJOTA17_2TARDIF_R
+		    + FLAG_TRTARDIF_F * ( positif(FLAG_RECTIF) * min(MAJOTA17_2TARDIF_R,MAJOTA17_2TARDIF_F)
+					 + (1 - positif(FLAG_RECTIF)) * min(MAJOTA17_2TARDIF_A, MAJOTA17_2TARDIF_F))
+		    + FLAG_TRMAJOP * MAJOTA17_2TARDIF_A
+		    + (1 - positif(FLAG_TRTARDIF + FLAG_TRTARDIF_R + FLAG_TRTARDIF_F + FLAG_TRMAJOP)) 
+			  * (positif(FLAG_RECTIF) * MAJOTA17_2TARDIF_R
+			    + (1 - positif(FLAG_RECTIF)) * MAJOTA17_2TARDIF_A)
+		   ) ;
+MAJOTAXATARDIF_D = somme(x = 07,08: MAJOTAXA0xTARDIF_D) 
+		+ MAJOTA17_1TARDIF_D + MAJOTA17_2TARDIF_D;
+regle corrective 10941:
+application : oceans, iliad;
+TIRBASE[0] =   positif(FLAG_RETARD) *
+                   (IRBASE_REF * (1 - positif(FLAG_NBSTRTR))
+                   + TIRBASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TIRBASE[0]  + 0 
+                ;
+TNAPCR[0] =   positif(FLAG_RETARD) *
+                   (NAPCRTARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TNAPCR[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TNAPCR[0] + 0 
+                ;
+TCSBASE[0] =   positif(FLAG_RETARD) *
+                   (CSGTARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TCSBASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TCSBASE[0] + 0 
+                ;
+TPSBASE[0] =   positif(FLAG_RETARD) *
+                   (PRSTARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TPSBASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TPSBASE[0] + 0 
+                ;
+TRDBASE[0] =   positif(FLAG_RETARD) *
+                   (RDSTARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TRDBASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TRDBASE[0] + 0 
+                ;
+TCSALBASE[0] =   positif(FLAG_RETARD) *
+                   (CSALTARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TCSALBASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TCSALBASE[0] + 0 
+                ;
+TCDISBASE[0] =   positif(FLAG_RETARD) *
+                   (CDISTARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TCDISBASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TCDISBASE[0] + 0 
+                ;
+TTAXABASE[0] =  positif(FLAG_RETARD) *
+                   (TAXATARDIF_A * (1 - positif(FLAG_NBSTRTR))
+                   + TTAXABASE[0] * positif(FLAG_NBSTRTR))
+              + (1 - positif(FLAG_RETARD)) * TTAXABASE[0] + 0 
+                ;
+regle corrective 23115:
+application : oceans, iliad;
+pour x = 07,08,10,11,17,31:
+PROPIRx = arr((T_RABPx / T_RABP) * 10000)/10000 
+        * FLAG_TRMAJOP ;
+pour x = 07,08,10,11,17,31:
+PROPCSx = arr((T_RABPCSx / T_RABPCS) * 10000)/10000 
+        * FLAG_TRMAJOP  + 0 ;
+pour x = 07,08,10,11,17,31:
+PROPRDx = arr((T_RABPRDx / T_RABPRD) * 10000)/10000 
+        * FLAG_TRMAJOP ;
+pour x = 07,08,10,11,17,31:
+PROPPSx = arr((T_RABPPSx / T_RABPPS) * 10000)/10000 
+        * FLAG_TRMAJOP ;
+regle corrective 23116:
+application : oceans, iliad;
+pour x = 08,11,31:
+MAJOIR_Px = arr( max(0,IRNIN) * PROPIRx * Tx/100)
+         * FLAG_TRMAJOP ;
+pour x = 08,11,31:
+MAJOCS_Px = arr( max(0,CSG) * PROPCSx * Tx/100)
+         * FLAG_TRMAJOP ;
+pour x = 08,11,31:
+MAJORD_Px = arr( max(0,RDSN) * PROPRDx * Tx/100)
+         * FLAG_TRMAJOP ;
+pour x = 08,11,31:
+MAJOPS_Px = arr( max(0,PRS) * PROPPSx * Tx/100)
+         * FLAG_TRMAJOP ;
+regle corrective 23117:
+application : oceans, iliad;
+MAJOIR_P07 = arr( max(0,IRNIN) * PROPIR07 * T07/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - T07)))
+         * FLAG_TRMAJOP;
+MAJOIR_P10_1 = arr( max(0,IRNIN) * PROPIR10 * T10/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - T10)))
+         * FLAG_TRMAJOP;
+MAJOIR_P10_2 = arr( max(0,IRNIN) * PROPIR10 * TX1758A/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - TX1758A)))
+         * FLAG_TRMAJOP;
+MAJOIR_P17_1 = arr( max(0,IRNIN) * PROPIR17 * T17/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - T17)))
+         * FLAG_TRMAJOP;
+MAJOIR_P17_2 = arr( max(0,IRNIN) * PROPIR17 * TX1758A/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - TX1758A)))
+         * FLAG_TRMAJOP;
+pour x = 07,10,17:
+MAJOCS_Px = arr( max(0,CSG) * PROPCSx * Tx/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - Tx)))
+         * FLAG_TRMAJOP;
+pour x = 07,10,17:
+MAJORD_Px = arr( max(0,RDSN) * PROPRDx * Tx/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - Tx)))
+         * FLAG_TRMAJOP;
+pour x = 07,10,17:
+MAJOPS_Px = arr( max(0,PRS) * PROPPSx * Tx/100)
+	 * (1 - null((1 -IND_RJLJ) + (10 - Tx)))
+         * FLAG_TRMAJOP;
+regle corrective 231171:
+application : oceans, iliad;
+IRNIN_MAJOP = IRBASE * FLAG_TRMAJOP ;
+CSG_MAJOP = CSBASE_MAJO * FLAG_TRMAJOP ;
+RDS_MAJOP = RDBASE_MAJO * FLAG_TRMAJOP;
+PRS_MAJOP = PSBASE_MAJO * FLAG_TRMAJOP;
+regle corrective 23118:
+application : oceans, iliad;
+PROPIR = somme(i=07,08,10,11,17,31 : PROPIRi)
+		* FLAG_TRMAJOP
+		* FLAG_RETARD ;
+PROPCS = somme(i=07,08,10,11,17,31 : PROPCSi)
+		* FLAG_TRMAJOP
+		* FLAG_RETARD ;
+PROPRD = somme(i=07,08,10,11,17,31 : PROPRDi)
+		* FLAG_TRMAJOP
+		* FLAG_RETARD ;
+PROPPS = somme(i=07,08,10,11,17,31 : PROPPSi)
+		* FLAG_TRMAJOP
+		* FLAG_RETARD ;
+regle corrective 231181:
+application : oceans, iliad;
+MAJOIR07TARDIF_P =  arr(MAJOIR07TARDIF_D * (1 - PROPIR_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPIR_A) ;
+
+MAJOIR08TARDIF_P =  arr(MAJOIR08TARDIF_D * (1 - PROPIR_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPIR_A)
+		+ 0;
+MAJOIR17_1TARDIF_P =  arr(MAJOIR17_1TARDIF_D * (1 - PROPIR_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPIR_A) ;
+MAJOIR17_2TARDIF_P =  arr(MAJOIR17_2TARDIF_D * (1 - PROPIR_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPIR_A) ;
+
+
+MAJOIRTARDIF_P = somme (x = 07,08 : MAJOIR0xTARDIF_P) 
+		  + MAJOIR17_1TARDIF_P + MAJOIR17_2TARDIF_P;
+MAJOCS07TARDIF_P =  arr(MAJOCS07TARDIF_D * (1 - PROPCS_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPCS_A);
+MAJOCS08TARDIF_P =  arr(MAJOCS08TARDIF_D * (1 - PROPCS_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPCS_A);
+MAJOCS17TARDIF_P =  arr(MAJOCS17TARDIF_D * (1 - PROPCS_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPCS_A);
+MAJOCSTARDIF_P = somme (x = 07,08,17 : MAJOCSxTARDIF_P);
+MAJORD07TARDIF_P =  arr(MAJORD07TARDIF_D * (1 - PROPRD_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPRD_A);
+MAJORD08TARDIF_P =  arr(MAJORD08TARDIF_D * (1 - PROPRD_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPRD_A);
+MAJORD17TARDIF_P =  arr(MAJORD17TARDIF_D * (1 - PROPRD_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPRD_A);
+MAJORDTARDIF_P = somme (x = 07,08,17 : MAJORDxTARDIF_P);
+MAJOPS07TARDIF_P =  arr(MAJOPS07TARDIF_D * (1 - PROPPS_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPPS_A);
+MAJOPS08TARDIF_P =  arr(MAJOPS08TARDIF_D * (1 - PROPPS_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPPS_A);
+MAJOPS17TARDIF_P =  arr(MAJOPS17TARDIF_D * (1 - PROPPS_A))
+		* FLAG_TRTARDIF_F
+		* FLAG_RETARD 
+		* positif(PROPPS_A);
+MAJOPSTARDIF_P = somme (x = 07,08,17 : MAJOPSxTARDIF_P);
+regle corrective 23119:
+application :  oceans, iliad ;
+MAJOTO =  MAJOIR_ST + MAJOPIR_TOT  
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJOIRTARDIF_A
+	+ FLAG_TRTARDIF * MAJOIRTARDIF_D
+	+ FLAG_TRTARDIF_F 
+	       * (positif(PROPIR_A) * MAJOIRTARDIF_P
+	       + (1 - positif(PROPIR_A)) * MAJOIRTARDIF_D)
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJOIRTARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJOIRTARDIF_A)
+
+        + MAJOCS_ST + MAJOPCS_TOT  
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJOCSTARDIF_A
+	+ FLAG_TRTARDIF * MAJOCSTARDIF_D
+	+ FLAG_TRTARDIF_F 
+	       * (positif(PROPCS_A) * MAJOCSTARDIF_P
+	       + (1 - positif(PROPCS_A)) * MAJOCSTARDIF_D)
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJOCSTARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJOCSTARDIF_A)
+
+        + MAJOPS_ST + MAJOPPS_TOT  
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJOPSTARDIF_A
+	+ FLAG_TRTARDIF * MAJOPSTARDIF_D
+	+ FLAG_TRTARDIF_F 
+	       * (positif(PROPPS_A) * MAJOPSTARDIF_P
+	       + (1 - positif(PROPPS_A)) * MAJOPSTARDIF_D)
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJOPSTARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJOPSTARDIF_A)
+
+        + MAJORD_ST + MAJOPRD_TOT  
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJORDTARDIF_A
+	+ FLAG_TRTARDIF * MAJORDTARDIF_D
+	+ FLAG_TRTARDIF_F 
+	       * (positif(PROPRD_A) * MAJORDTARDIF_P
+	       + (1 - positif(PROPRD_A)) * MAJORDTARDIF_D)
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJORDTARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJORDTARDIF_A)
+
+        + MAJOCSAL_ST 
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJOCSALTARDIF_A
+	+ FLAG_TRTARDIF * MAJOCSALTARDIF_D
+	+ FLAG_TRTARDIF_F * MAJOCSALTARDIF_D
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJOCSALTARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJOCSALTARDIF_A)
+
+
+        + MAJOCDIS_ST 
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJOCDISTARDIF_A
+	+ FLAG_TRTARDIF * MAJOCDISTARDIF_D
+	+ FLAG_TRTARDIF_F * MAJOCDISTARDIF_D
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJOCDISTARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJOCDISTARDIF_A)
+
+        + MAJOTAXA_ST  
+	+ FLAG_RETARD * (1 - positif(FLAG_RECTIF)) * MAJOTAXATARDIF_A
+	+ FLAG_TRTARDIF * MAJOTAXATARDIF_D
+	+ FLAG_TRTARDIF_F * MAJOTAXATARDIF_D
+	- FLAG_TRTARDIF_F * (positif(FLAG_RECTIF) * MAJOTAXATARDIF_R
+			   + (1 - positif(FLAG_RECTIF)) * MAJOTAXATARDIF_A)
+	;
+
+regle corrective 1071:
+application : oceans ;
+RFDEQ = FLAG_NUNV * (- abs(DRCF)) ;
+pour x= 01..12,30,31,55:
+RFDEQx = FLAG_NUNV * ( arr(RFDEQ * RBRFx/RBRF) ) ;
+regle corrective 23121:
+application : oceans ;
+NARF = FLAG_NUNV * ( RFCG - RFCG_R ) ;
+NBRF = FLAG_NUNV * ( -abs(DRFRP) + abs(DRFRP_R) );
+NABA = FLAG_NUNV * ( max(0,BANOR) - max(0,BANOR_R) ) ;
+NBBA = FLAG_NUNV * ( -abs(DEFBA) + abs(DEFBA_R) );
+NALO = FLAG_NUNV * ( BICNPF - BICNPF_R ) ;
+NBLO = FLAG_NUNV * ( -abs(DLMRN) + abs(DLMRN_R) );
+NANC = FLAG_NUNV * ( BALNP - BALNP_R ) ;
+NBNC = FLAG_NUNV * ( -abs(DALNP) + abs(DALNP_R) );
+NACO = FLAG_NUNV * ( RNI - RNI_R ) ;
+NBCO = FLAG_NUNV * ( -abs(RNIDF) + abs(RNIDF_R) );
+regle corrective 23122:
+application : oceans ;
+pour x=01..12,30,31,55;i=BA,LO,NC:
+RNix = FLAG_NUNV * ( arr( RNi * (RBix / RBi) ) );
+pour x=01..12,30,31,55:
+RNRFx = FLAG_NUNV * ( arr((RNRF-RFDEQ)* RBRFx / RBRF) );
+pour x=01..12,30,31,55;i=RF,BA,LO,NC:
+NCix = FLAG_NUNV *  RNix ;
+regle corrective 23123:
+application : oceans ;
+pour x=01..12,30,31,55;i=RF,BA,LO,NC:
+NUiNx = FLAG_NUNV * ( arr (
+              positif (NAi + NBi) * ( NCix * (NAi / (NAi + NBi)))
+             +
+             ( 1 - positif (NAi + NBi)) * NCix   
+                   ));
+pour x=01..12,30,31,55;i=RF,BA,LO,NC:
+NViDx = FLAG_NUNV * ( NCix - NUiNx ) ;
+regle corrective 23124:
+application : oceans ;
+NUTN = somme(x=1..6:somme(t=RF,BA,LO,NC:NUtN0x));
+pour x=01..12,30,31,55:
+RNCOx = FLAG_NUNV *  arr( (RNCO+RFDEQ+NUTN) * 
+   ((RBCOx+RFDEQx+somme(t=RF,BA,LO,NC:NUtNx)) / (RBCO+RFDEQ+NUTN)) ) ;
+pour x=01..12,30,31,55:
+NCCOx = FLAG_NUNV * RNCOx ;
+regle corrective 23125:
+application : oceans ;
+pour x=01..12,30,31,55:
+NUCONx = FLAG_NUNV * ( arr( 
+               positif (NACO + NBCO) * (NCCOx * (NACO / (NACO + NBCO)))
+               +
+              (1 - positif (NACO + NBCO)) * positif_ou_nul (NBCO)* NCCOx 
+                    ) ) ;
+pour x=01..12,30,31,55:
+NVCODx = FLAG_NUNV * ( NCCOx - NUCONx ) ;
+pour x=01..12,31,55:
+NUTOTx = FLAG_NUNV * ( positif(NUCONx) * NUCONx ) ;
+NUTOT30 = FLAG_NUNV *  R1649 ;
+NUTOT = FLAG_NUNV * ( somme(t=01..12,30,31,55: NUTOTt) );
+regle corrective 23126:
+application : oceans ;
+pour x=01..12,30,31,55:
+NUPTOTx = FLAG_NUNV * (RBPCx + NURFNx);
+NUPTOT = FLAG_NUNV * somme(t=01..12,30,31,55: NUPTOTt);
+pour x=01..12,30,31,55:
+NUCTOTx = FLAG_NUNV * (RBCCx + NURFNx) ;
+NUCTOT = FLAG_NUNV * somme(t=01..12,30,31,55: NUCTOTt);
+pour x=01..12,30,31,55:
+NUDTOTx = FLAG_NUNV * (RBDCx + NURFNx);
+NUDTOT = FLAG_NUNV * somme(t=01..12,30,31,55: NUDTOTt);
